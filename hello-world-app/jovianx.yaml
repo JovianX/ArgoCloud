@@ -1,0 +1,442 @@
+# JovianX API Compatibility
+# v1
+jovianx_api_version: v1
+
+# Name of this SaaS application
+# string
+application_name: hello-world-app
+
+# Blueprint type.
+# stack - Application stacks. Useful to provisioning cluster infrastructure and
+#         setuping account application infrastructure.
+# account - Application for account. Application that should be launched for
+#           each account.
+application_type: account
+
+# version of this JovianX blueprint
+# semantic versioning
+version: 0.1.11
+
+main_endpoint_component: node-component
+
+application_launch_timeout:
+  tries_count: 120
+  seconds_between_tries: 5
+
+status_check:
+  failure_threshold: 1
+
+components:
+  - name: node-component
+    version: 1.0.0
+    provider: helm_chart # helm_chart | docker
+    helm_chart_name: node-chart
+    helm_values_file: values-jovianx.yaml
+    helm_set:
+      - key: repository
+        value: https://gitlab.com/jovianx-saas-platform/hello-world-app.git
+      - key: replicas
+        value: 1
+      - key: vendor_company
+        value: '{{ account://vendor_company }}'
+      - key: end_company
+        value: '{{ account://end_company }}'
+      - key: account_api_key
+        value: '{{ account://account_api_key }}'
+      - key: admin_email
+        value: '{{ account://admin_email }}'
+      - key: admin_password
+        value: '{{ account://admin_password }}'
+      - key: api_host
+        value: '{{ account://api_host }}'
+      - key: firstname
+        value: '{{ account://firstname }}'
+      - key: lastname
+        value: '{{ account://lastname }}'
+      - key: blueprint_version
+        value: '{{ account://application_version }}'
+      # TODO: Fix referencing to shared components release names.
+      # - key: my_db_conn_string
+      #   value: mongo://{{application://components/mongodb-component/helm_release_name}}
+      # - key: DATABASE_HOST
+      #   value: "{{application://components/mongodb-component/helm_release_name}}.{{ account://shared_components_namespace }}"
+    helm_set_files:
+      - key: file_parameter_1
+        path: values/file1
+      - key: file_parameter_2
+        path: values/file2
+    endpoints:
+      - name: 'application_web_interface'
+        service_name: '{{application://components/node-component/helm_release_name}}-node'
+        type: entry_point
+        entry_point_url: 'http://{{ account://end_company }}-dev.jovianx.app/app'
+        dns: '{{ account://end_company }}-dev.jovianx.app'
+        port: 80
+        path: /app
+      - name: keepalive_agent_ep
+        service_name: '{{application://components/node-component/helm_release_name}}-node'
+        port: 81
+        type: agent
+
+  - name: node-component2
+    version: 1.0.0
+    provider: helm_chart # helm_chart | docker
+    helm_chart_name: node-chart
+    helm_values_file: values-jovianx.yaml
+    helm_set:
+      - key: repository
+        value: https://gitlab.com/jovianx-saas-platform/hello-world-app.git
+      - key: replicas
+        value: 1
+      - key: vendor_company
+        value: '{{ account://vendor_company }}'
+      - key: end_company
+        value: '{{ account://end_company }}'
+      - key: account_api_key
+        value: '{{ account://account_api_key }}'
+      - key: admin_email
+        value: '{{ account://admin_email }}'
+      - key: admin_password
+        value: '{{ account://admin_password }}'
+      - key: api_host
+        value: '{{ account://api_host }}'
+      - key: firstname
+        value: '{{ account://firstname }}'
+      - key: lastname
+        value: '{{ account://lastname }}'
+      # TODO: Fix referencing to shared components release names.
+      # - key: my_db_conn_string
+      #   value: mongo://{{application://components/mongodb-component/helm_release_name}}
+      # - key: DATABASE_HOST
+      #   value: "{{application://components/mongodb-component/helm_release_name}}.{{ account://shared_components_namespace }}"
+    helm_set_files:
+      - key: file_parameter_1
+        path: values/file1
+      - key: file_parameter_2
+        path: values/file2
+    endpoints:
+      - name: 'application_web_interface2'
+        service_name: '{{application://components/node-component2/helm_release_name}}-node'
+        type: card
+        entry_point_url: 'http://{{ account://end_company }}-dev2.jovianx.app/app'
+        dns: '{{ account://end_company }}-dev2.jovianx.app'
+        port: 80
+        path: /app
+      - name: 'keepalive_agent_ep2'
+        service_name: '{{application://components/node-component2/helm_release_name}}-node'
+        port: 81
+        type: agent
+
+
+agents:
+  - name: keepalive-blob # external
+    version: 1.0.0
+    source: https://jovianxdbmaestroagent.blob.core.windows.net/dbmaestor-agents/agent.tar.gz
+    bootstrap-script: ./install-keepalive.sh {{ application://endpoints/keepalive_agent_ep/ip }} {{ application://endpoints/keepalive_agent_ep/port }} '{{ account://end_company }}' {{ account://account_api_key }}
+
+
+settings_descriptors:
+  - name: launchSecondNodeComponent
+    display: 'Checkbox Example - Launch second Node component'
+    description: 'Enables or disable node component helm release creation.'
+    input_type: checkbox
+    default: true
+    select_options:
+      - name: true
+        components:
+          - name: node-component2
+            enabled: true
+      - name: false
+        components:
+          - name: node-component2
+            enabled: false
+
+  - name: ha
+    display: 'Checkbox Example - Enable High availability cluster'
+    description: 'This option will replicate your application across the world. It will drastically reduce latency'
+    input_type: checkbox
+    default: false
+    select_options:
+      - name: true
+        components:
+          - name: node-component
+            helm_set:
+              - key: ha0-manager
+                value: true
+            endpoints:
+              - name: 'application_web_interface'
+                service_name: '{{application://components/node-component/helm_release_name}}-node'
+                type: main_entry_point
+                entry_point_url: 'http://{{ account://end_company }}.jovianx.app/ha-true'
+                label: 'application_web_interface'
+                port: 80
+                dns: '{{ account://end_company }}.jovianx.app'
+      - name: false
+        components:
+          - name: node-component
+            helm_set:
+              - key: ha1-manager
+                value: false
+            endpoints:
+              - name: 'application_web_interface'
+                service_name: '{{application://components/node-component/helm_release_name}}-node'
+                type: main_entry_point
+                entry_point_url: 'http://{{ account://end_company }}.jovianx.app/ha-false'
+                label: 'application_web_interface'
+                port: 80
+                dns: '{{ account://end_company }}-dns.jovianx.app'
+
+  - name: cloudProvider
+    display: 'Radio Select example - Cloud Provider'
+    description: 'You can select among three leaders of cloud infrastructure'
+    input_type: radio
+    default: azure
+    description_title: 'Choose your provider'
+    select_options:
+      - name: azure
+        display: 'Microsoft Azure'
+        img: 'https://www.mongodb.com/assets/images/cloud/atlas/logos/azure.png'
+        components:
+          - name: node-component
+            helm_set:
+              - key: cloudProvider
+                value: azure
+      - name: aws
+        display: 'Amazon Web Services'
+        img: 'https://www.mongodb.com/assets/images/cloud/atlas/logos/aws.png'
+        components:
+          - name: node-component
+            helm_set:
+              - key: cloudProvider
+                value: aws
+      - name: gcp
+        display: 'Google Cloud Platform'
+        img: 'https://www.mongodb.com/assets/images/cloud/atlas/logos/gcp.png'
+        components:
+          - name: node-component
+            helm_set:
+              - key: cloudProvider
+                value: gcp
+
+  - name: support
+    display: 'Dropdown example - Support package'
+    input_type: select
+    default: premium
+    description: 'Basic support is included for all customers and covers availability of the Atlas service, connectivity issues, and questions about the UI or platform features.'
+    select_options:
+      - name: basic
+        display: 'basic support'
+        components:
+          - name: node-component
+            helm_set:
+              - key: support
+                value: base
+      - name: ndb
+        display: 'Next business day support'
+        components:
+          - name: node-component
+            helm_set:
+              - key: support
+                value: business-days
+      - name: '24/7'
+        display: 'support 24/7'
+        enabled: false
+        components:
+          - name: node-component
+            helm_set:
+              - key: support
+                value: round-the-clock
+      - name: premium
+        display: 'premium support'
+        components:
+          - name: node-component
+            helm_set:
+              - key: support
+                value: premium
+
+  - name: businessDay
+    display: 'Dependency Example - Business day'
+    input_type: select
+    dependency:
+      name: support
+      values:
+        - ndb
+        - basic
+    default: monday
+    select_options:
+      - name: monday
+        display: Monday
+        components:
+          - name: node-component
+            helm_set:
+              - key: business_day
+                value: monday
+      - name: tuesday
+        display: Tuesday
+        components:
+          - name: node-component
+            helm_set:
+              - key: business_day
+                value: tuesday
+
+  - name: months
+    display: 'Integer - Number of months for support'
+    description: 'For how long support should be provided'
+    input_type: number
+    # min_value: 1
+    # max_value: 10
+    default: 3
+    components:
+      - name: node-component
+        helm_set:
+          - key: months
+
+  - name: moto
+    display: 'String - Company motto'
+    description: 'This is just an example of string input'
+    input_type: string
+    # max_length: 50
+    default: 'just do it'
+    components:
+      - name: node-component
+        helm_set:
+          - key: moto
+
+  - name: additional_yaml
+    display: 'YAML Example - for Helm'
+    description: 'This is example of multiple line input that will be passed to Helm.'
+    input_type: textarea
+    # max_length: 50
+    default: ''
+    components:
+      - name: node-component
+        helm_set:
+          - key: additional_yaml
+
+  - name: VPNTunnel
+    display: 'Checkbox with dependency - Use VPN tunnel'
+    description: 'Setup connection to your app via VPN tunnel'
+    input_type: checkbox
+    default: false
+    select_options:
+      - name: true
+        components:
+          - name: node-component
+            helm_set:
+              - key: enable_vpn
+                value: true
+      - name: false
+        components:
+          - name: node-component
+            helm_set:
+              - key: enable_vpn
+                value: false
+
+  - name: VPNkey
+    display: 'VPN key'
+    input_type: string
+    default: ''
+    dependency:
+      name: VPNTunnel
+      values:
+        - true
+    components:
+      - name: node-component2
+        helm_set:
+          - key: VPNkey
+
+  - name: DBStorage
+    display: 'Scroller Example - Database storage size'
+    description: 'Select how much space do you need'
+    dependency:
+      name: cloudProvider
+      values:
+        - gcp
+        - azure
+    input_type: slider
+    units: GB
+    min_value: 1
+    max_value: 20
+    step: 1
+    default: 3
+    components:
+      - name: node-component2
+        helm_set:
+          - key: DBStorage
+
+
+hooks:
+  pre_install:
+    - name: pre-install-hook
+      # kube_context: jovianx-admin-jovianx-system-gke_jovianx-dev-workload_us-central1-a_jovianx-dev
+      namespace: jovianx-system
+      service_account_name: jovianx-admin
+      on_failure: stop # continue | stop
+      timeout: 120
+      provider: docker
+      image: 'alpine'
+      command: ['/bin/sh', '-c']
+      args:
+        - env; sleep 1;
+      env:
+        - name: JX_ENV_KEY
+          value: "Hello World"
+        - name: CUSTOMER_ACCOUNT_NAME
+          value: "{{ account://end_company }}"
+
+  post_install:
+    - name: post-install-user-add
+      provider: docker
+      image: 'appropriate/curl'
+      command: ['/bin/sh', '-c']
+      args:
+        - curl {{ application://endpoints/keepalive_agent_ep/ip }}/api/add_user?user={{ account://admin_email }}&password={{ account://admin_password }};
+
+  pre_update:
+    - name: pre-update-web-hook
+      timeout: 10
+      on_failure: stop
+      provider: docker
+      image: 'appropriate/curl'
+      command: ['/bin/sh', '-c']
+      args:
+        - curl https://www.google.com/search?q=pre_update_hook
+
+  post_update:
+    - name: post-update-web-hook
+      timeout: 10
+      provider: docker
+      image: 'appropriate/curl'
+      command: ['/bin/sh', '-c']
+      args:
+        - curl https://www.google.com/search?q=post_update_hook
+
+  pre_delete:
+    - name: pre-delete-web-hook
+      timeout: 10
+      provider: docker
+      image: 'appropriate/curl'
+      command: ['/bin/sh', '-c']
+      args:
+        - curl https://www.google.com/search?q=pre_delete_hook
+  metrics:
+    - name: get-accounts-count
+      schedule: "* * * * *" #Min  Hour Day  Mon  Weekday
+      metrics_json_path: /metrics/metrics.json
+      env:
+        - name: JX_ENV_KEY
+          value: "Hello World"
+        - name: CUSTOMER_ACCOUNT_NAME
+          value: "{{ account://end_company }}"
+      collector_script:
+      - |
+        response=$(curl -s https://www.bookmarks.dev/api/version | jq)
+        echo response > /metrics/metrics.json
+tests:
+    from_file:
+    - tests/jovianx-test1.yaml
+    - tests/jovianx-test2.yaml
+    execution_mode: parallel # or serial (default: parallel) now support only parallel
+    on_success: delete # or keep (default: delete)
+    on_failure: keep # or delete (default: keep)
+

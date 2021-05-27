@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "node.fullname" . }}
+  labels:
+    app: {{ template "node.name" . }}
+    chart: {{ template "node.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "node.name" . }}
+      release: "{{ .Release.Name }}"
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "node.name" . }}
+        chart: {{ template "node.chart" . }}
+        release: {{ .Release.Name | quote }}
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.image.pullSecrets }}
+        - name: {{ . }}
+      {{- end}}
+      {{- end }}
+      initContainers:
+      - name: git-clone-repository
+        image: "{{ template "git.image" . }}"
+        imagePullPolicy: {{ .Values.git.pullPolicy | quote }}
+        command: [ '/bin/sh', '-c' , 'git clone {{ .Values.repository }} /app && cd /app && git checkout {{ .Values.revision }}']
+        volumeMounts:
+        - name: app
+          mountPath: /app
+      - name: npm-install
+        image: "{{ template "node.image" . }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        workingDir: /app
+        command: ['/bin/bash', '-c', 'useradd bitnami && chown -R bitnami:bitnami /app && npm install']
+        volumeMounts:
+        - name: app
+          mountPath: /app
+      containers:
+      - name: {{ template "node.fullname" . }}
+        image: "{{ template "node.image" . }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        env:
+        # Start Jovian
+        - name: VENDOR_COMPANY
+          value: {{ .Values.vendor_company }}
+        - name: END_COMPANY
+          value: {{ .Values.end_company }}
+        - name: ACCOUNT_API_KEY
+          value: {{ .Values.account_api_key }}
+        - name: ADMIN_EMAIL
+          value: {{ .Values.admin_email | quote }}
+        - name: ADMIN_PASSWORD
+          value: {{ .Values.admin_password | quote }}
+        - name: API_HOST
+          value: {{ .Values.api_host }}
+        - name: MONTHS
+          value: {{ .Values.months | quote }}
+        - name: ENABLE_TOS_SECURE_CHANGE
+          value: {{ .Values.enableTosSecureChange | quote }}
+        # End Jovian
+        - name: DATABASE_HOST
+          value: {{ .Values.DATABASE_HOST | quote }}
+        - name: DATABASE_PORT
+          value: "27017"
+        - name: DATABASE_USER
+          value: {{ .Values.mongodb.mongodbUsername | quote }}
+        - name: DATABASE_PASSWORD
+          value: {{ .Values.mongodb.mongodbPassword | quote }}
+        - name: DATABASE_NAME
+          value: {{ .Values.mongodb.mongodbDatabase | quote }}
+        - name: DATABASE_CONNECTION_OPTIONS
+          value: ""
+        - name: DATA_FOLDER
+          value: "/app"
+{{- if .Values.extraEnv }}
+{{ toYaml .Values.extraEnv | indent 8 }}
+{{- end }}
+        workingDir: /app
+        command: ['/bin/bash', '-c', 'useradd bitnami && su bitnami -c "PATH=/opt/bitnami/node/bin:$PATH npm start"']
+        ports:
+        - name: http
+          containerPort: {{ .Values.applicationPort }}
+        - name: agent
+          containerPort: {{ .Values.agentPort }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 5
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        volumeMounts:
+        - name: app
+          mountPath: /app
+        - name: data
+          mountPath: {{ .Values.persistence.path }}
+      volumes:
+      - name: app
+        emptyDir: {}
+      - name: data
+      {{- if .Values.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ template "fullname" . }}
+      {{- else }}
+        emptyDir: {}
+      {{- end }}

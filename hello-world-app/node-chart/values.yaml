@@ -1,0 +1,106 @@
+## Global Docker image registry
+## Please, note that this will override the image registry for all the images, including dependencies, configured to use the global value
+##
+# global:
+#   imageRegistry:
+
+## Bitnami node image version
+## ref: https://hub.docker.com/r/bitnami/node/tags/
+##
+image:
+  registry: docker.io
+  repository: bitnami/node
+  tag: 8.14.0
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ##
+  # pullSecrets:
+  #   - myRegistrKeySecretName
+
+## Bitnami git image version
+## ref: https://hub.docker.com/r/bitnami/git/tags/
+##
+git:
+  registry: docker.io
+  repository: bitnami/git
+  tag: latest
+  pullPolicy: IfNotPresent
+
+## Git repository http/https
+##
+repository:  https://github.com/bitnami/sample-mean.git
+
+## Git repository revision to checkout
+##
+revision: master
+
+## Specify the number of replicas for the application
+##
+replicas: 1
+
+## Specify the ports where your application will be running
+##
+applicationPort: 3000
+agentPort: 4000
+
+
+## Kubernetes Service Configuration
+service:
+  ## For minikube, set this to NodePort, elsewhere use LoadBalancer
+  ##
+  type: LoadBalancer
+  port: 80
+  agentPort: 81
+  ## Specify the nodePort value for the LoadBalancer and NodePort service types.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+  ##
+  # nodePort:
+  ## Provide any additional annotations which may be required. This can be used to
+  ## set the LoadBalancer service type to internal only.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+  ##
+  annotations: {}
+  # loadBalancerIP:
+
+## Enable persistence using Persistent Volume Claims
+## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  enabled: false
+  path: /app/data
+  ## If defined, volume.beta.kubernetes.io/storage-class: <storageClass>
+  ## Default: volume.alpha.kubernetes.io/storage-class: default
+  ##
+  # storageClass:
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+## Configure resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+##
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 500m
+  #   memory: 512Mi
+
+##
+## MongoDB chart configuration
+##
+## https://github.com/helm/charts/blob/master/stable/mongodb/values.yaml
+##
+mongodb:
+  ## MongoDB custom user and database
+  ## ref: https://github.com/bitnami/bitnami-docker-mongodb/blob/master/README.md#creating-a-user-and-database-on-first-run
+  ##
+  mongodbUsername: user
+  mongodbDatabase: test_db
+  mongodbPassword: secret_password
