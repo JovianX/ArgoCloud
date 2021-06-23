@@ -1,0 +1,58 @@
+# JovianX API Compatibility
+# v1
+jovianx_api_version: v1
+
+# Name of this SaaS application
+# string
+application_name: ArgoCloud
+
+# Blueprint type.
+# stack - Application stacks. Useful to provisioning cluster infrastructure and
+#         setuping account application infrastructure.
+# account - Application for account. Application that should be launched for
+#           each account.
+application_type: account
+
+# version of this JovianX blueprint
+# semantic versioning
+version: 0.0.1
+
+main_endpoint_component: ArgoCD
+
+application_launch_timeout:
+  tries_count: 120
+  seconds_between_tries: 5
+
+status_check:
+  failure_threshold: 1
+
+components:
+  - name: ArgoCD
+    version: 3.6.8 # Chart version
+    provider: helm_chart # helm_chart | docker
+    helm_chart_name: argo-cd
+    helm_set:
+      - key: repository
+        value: https://gitlab.com/jovianx-saas-platform/hello-world-app.git
+    endpoints:
+      - name: 'application_web_interface'
+        service_name: '{{application://components/ArgoCD/helm_release_name}}-argocd-server'
+        type: entry_point
+        entry_point_url: 'http://{{ account://end_company }}-dev.jovianx.app/app'
+        dns: '{{ account://end_company }}-dev.jovianx.app'
+        port: 80
+        path: /app
+
+settings_descriptors:
+  - name: kubeconfig_yaml
+    display: 'Kubeconfig YAML'
+    description: 'ArgoCD will connect to your Kubernetes cluster using this Kubeconfig file.'
+    input_type: textarea
+    default: ''
+    components:
+      - name: ArgoCD
+        helm_set:
+          - key: configs.clusterCredentials
+
+
+
