@@ -409,8 +409,8 @@ server:
 
   ## Additional command line arguments to pass to argocd-server
   ##
-  extraArgs: []
-  #  - --insecure
+  extraArgs: 
+    - --insecure
 
   ## Environment variables to pass to argocd-server
   ##
@@ -543,10 +543,14 @@ server:
     automountServiceAccountToken: true
 
   ingress:
-    enabled: false
-    annotations: {}
-    labels: {}
-    ingressClassName: ""
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-argo
+#      kubernetes.io/ingress.class: nginx
+      kubernetes.io/tls-acme: "true"
+    labels:
+      app: argo
+    ingressClassName: "nginx"
 
     ## Argo Ingress.
     ## Hostnames must be provided if Ingress is enabled.
@@ -752,7 +756,7 @@ server:
   ## Enable Admin ClusterRole resources.
   ## Enable if you would like to grant rights to ArgoCD to deploy to the local Kubernetes cluster.
   clusterAdminAccess:
-    enabled: true
+    enabled: false
 
   ## Enable BackendConfig custom resource for Google Kubernetes Engine
   GKEbackendConfig:
