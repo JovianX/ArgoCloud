@@ -15,7 +15,7 @@ application_type: account
 
 # version of this JovianX blueprint
 # semantic versioning
-version: 0.0.1
+version: 0.0.2
 
 main_endpoint_component: ArgoCD
 
@@ -32,27 +32,52 @@ components:
     provider: helm_chart # helm_chart | docker
     helm_chart_name: argo-cd
     helm_set:
-      - key: repository
-        value: https://gitlab.com/jovianx-saas-platform/hello-world-app.git
+      - key: controller.clusterAdminAccess.enabled
+        value: false
+      - key: server.ingress.hosts[0]
+        value: '{{ account://end_company }}.argocloud.io'
+      - key: server.ingress.tls[0].secretName
+        value: argo-cert-secret
+      - key: server.ingress.tls[0].hosts[0]
+        value: '{{ account://end_company }}.argocloud.io'
+      - key: configs.clusterCredentials[0].name
+        value: '{{ account://end_company }}-default'
+      - key: configs.clusterCredentials[0].config.tlsClientConfig.insecure
+        value: false
     endpoints:
       - name: 'application_web_interface'
         service_name: '{{application://components/ArgoCD/helm_release_name}}-argocd-server'
         type: entry_point
-        entry_point_url: 'http://{{ account://end_company }}-dev.jovianx.app/app'
-        dns: '{{ account://end_company }}-dev.jovianx.app'
+        entry_point_url: 'http://{{ account://end_company }}.argocloud.io'
+        dns: '{{ account://end_company }}.argocloud.io'
         port: 80
-        path: /app
+        path: /
 
 settings_descriptors:
-  - name: kubeconfig_yaml
-    display: 'Kubeconfig YAML'
-    description: 'ArgoCD will connect to your Kubernetes cluster using this Kubeconfig file.'
-    input_type: textarea
-    default: ''
+  - name: Kubernetes API server
+    display: 'Enter the url to your k8s server'
+    description: 'Enter the url to your k8s server'
+    input_type: string
+    description_title: 'Enter the url to your k8s server'
     components:
       - name: ArgoCD
         helm_set:
-          - key: configs.clusterCredentials
-
-
-
+          - key: configs.clusterCredentials[0].server
+  - name: Kubernetes API token
+    display: 'Enter the token to your k8s server'
+    description: 'Enter the token to your k8s server'
+    input_type: string
+    description_title: 'Enter the token to your k8s server'
+    components:
+      - name: ArgoCD
+        helm_set:
+          - key: configs.clusterCredentials[0].config.bearerToken
+  - name: Kubernetes API CA
+    display: 'Enter the CA to your k8s server'
+    description: 'Enter the CA to your k8s server'
+    input_type: string
+    description_title: 'Enter the CA to your k8s server'
+    components:
+      - name: ArgoCD
+        helm_set:
+          - key: configs.clusterCredentials[0].config.tlsClientConfig.caData
