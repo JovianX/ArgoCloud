@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-argo
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+  labels:
+    app: argo
+  name: argo-ingress
+  namespace: stage--argo3
+spec:
+  rules:
+  - host: my.rgcld.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: pyunf-argocd-server
+            port:
+              name: http
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - my.rgcld.com
+    secretName: argo-cert-secret

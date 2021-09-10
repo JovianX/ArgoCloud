@@ -44,6 +44,19 @@ components:
         value: '{{ account://end_company }}-default'
       - key: configs.clusterCredentials[0].config.tlsClientConfig.insecure
         value: false
+      # - key: server.config.accounts.'{{ account://admin_email }}'
+      #   value: 'apikey\, login'
+      - key: server.config.url
+        value: '{{ account://end_company }}.argocloud.io'
+      - key: configs.secret.argocdServerAdminPassword
+        value: '$2a$10$S5eSzlX01u1DjAsp8gtn0.7.mFCG4DnOcdjxTfVOge/nEzubn6WXK'
+      - key: company
+        value: "{{ account://end_company }}"
+      - key: admin_email
+        value: "{{ account://admin_email }}"
+      - key: admin_password
+        value: "{{ account://admin_password }}"
+        
     endpoints:
       - name: 'application_web_interface'
         service_name: '{{application://components/ArgoCD/helm_release_name}}-argocd-server'
@@ -56,7 +69,7 @@ components:
 settings_descriptors:
   - name: Kubernetes API server
     display: 'Enter the url to your k8s server'
-    description: 'Enter the url to your k8s server'
+    description: 'Enter the url to your k8s server. To get all needed values - direct your kubectl to the cluster context and run: bash <(curl -L https://git.io/JCEbo) '
     input_type: string
     description_title: 'Enter the url to your k8s server'
     components:
@@ -65,7 +78,7 @@ settings_descriptors:
           - key: configs.clusterCredentials[0].server
   - name: Kubernetes API token
     display: 'Enter the token to your k8s server'
-    description: 'Enter the token to your k8s server'
+    description: 'Enter the token to your k8s server. To get all needed values - direct your kubectl to the cluster context and run: bash <(curl -L https://git.io/JCEbo) '
     input_type: string
     description_title: 'Enter the token to your k8s server'
     components:
@@ -73,11 +86,25 @@ settings_descriptors:
         helm_set:
           - key: configs.clusterCredentials[0].config.bearerToken
   - name: Kubernetes API CA
-    display: 'Enter the CA to your k8s server'
-    description: 'Enter the CA to your k8s server'
+    display: 'Enter the CA for your k8s server'
+    description: 'Enter the CA for your k8s server. To get all needed values - direct your kubectl to the cluster context and run: bash <(curl -L https://git.io/JCEbo) '
     input_type: string
-    description_title: 'Enter the CA to your k8s server'
+    description_title: 'Enter the CA for your k8s server'
     components:
       - name: ArgoCD
         helm_set:
           - key: configs.clusterCredentials[0].config.tlsClientConfig.caData
+# hooks:
+#   post_install:
+#     - name: add-user
+#       provider: docker
+#       image: 'otomato/argocd_kubectl:with_script'
+#       service_account_name: argocd-server
+#       service_account_name: jovianx-admin
+#       env:
+#         - name: COMPANY
+#           value: "{{ account://end_company }}"
+#         - name: ADMIN_EMAIL
+#           value: "{{ account://admin_email }}"
+#       command: ["/myscript/setup.sh"]
+#       args: ["stam"]

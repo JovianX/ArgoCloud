@@ -1,0 +1,13 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: httpbinproxy
+spec:
+  virtualhost:
+    fqdn: my.rgcls.com
+    tls:
+      secretName: argo-cert-secret
+  routes:
+  - services:
+    - name: httpbin
+      port: 8080

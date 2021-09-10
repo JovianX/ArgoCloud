@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-cm-patch
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install
+#    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: init-wait-for-argo
+        image: otomato/argocd_kubectl:with_script
+        command: ["sh", "-cx", "for i in $(seq 1 300); do argocd login {{ .Release.Name }}-argocd-server --name default --username admin --password ArgoCloud --plaintext && exit 0 || sleep 3; done; exit 1"]    
+      containers:
+      - image: otomato/argocd_kubectl:with_script
+        name: add-argocloud-user
+        imagePullPolicy: Always
+        command:
+          - /myscript/setup.sh
+        env:
+          - name: RELEASE_NAME
+            value: "{{ .Release.Name }}"
+          - name: ADMIN_EMAIL
+            value: "{{ .Values.admin_email }}"
+          - name: ADMIN_PASSWORD
+            value: "{{ .Values.admin_password }}"
+      restartPolicy: Never
+      serviceAccount: argocd-server
+      serviceAccountName: argocd-server
+      
